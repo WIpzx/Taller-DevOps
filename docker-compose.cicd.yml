@@ -1,0 +1,62 @@
+# ============================================================
+# Infraestructura CI/CD — Jenkins + SonarQube
+# Puertos host:  Jenkins=8080  SonarQube=9000
+# Red común: taller_cicd_net   |   Volúmenes persistentes
+#
+# Levantar:  docker compose -f docker-compose.cicd.yml up -d --build
+#
+# NOTA (Windows + Docker Desktop): el socket se monta como //var/run/docker.sock
+# (el doble // evita que Git Bash reescriba la ruta). Jenkins corre como root
+# para poder usar el socket del host y desplegar con docker compose.
+# ============================================================
+name: taller_devops_cicd
+
+services:
+  jenkins:
+    build: ./jenkins
+    image: taller_devops_jenkins:latest
+    container_name: taller_jenkins
+    restart: unless-stopped
+    user: root
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_data:/var/jenkins_home
+      # Acceso al daemon Docker del host para construir/desplegar DEV y PROD.
+      - //var/run/docker.sock:/var/run/docker.sock
+      # Monta el repo para que los jobs locales puedan usar los compose (opcional).
+      - ./:/workspace:ro
+    networks:
+      - taller_cicd_net
+
+  sonarqube:
+    image: sonarqube:lts-community
+    container_name: taller_sonarqube
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      # Evita que un chequeo de Elasticsearch tumbe el arranque en entornos sin
+      # vm.max_map_count elevado (ver docs/jenkins-config.md si aun así falla).
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    networks:
+      - taller_cicd_net
+
+volumes:
+  jenkins_data:
+    name: taller_jenkins_data
+  sonarqube_data:
+    name: taller_sonarqube_data
+  sonarqube_extensions:
+    name: taller_sonarqube_extensions
+  sonarqube_logs:
+    name: taller_sonarqube_logs
+
+networks:
+  taller_cicd_net:
+    name: taller_cicd_net

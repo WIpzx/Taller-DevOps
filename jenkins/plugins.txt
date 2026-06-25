@@ -1,0 +1,25 @@
+# Plugins preinstalados para reducir pasos manuales en Jenkins.
+# Se instalan con jenkins-plugin-cli durante el build de la imagen.
+
+# Pipeline (Declarative + Scripted) y utilidades
+workflow-aggregator
+pipeline-stage-view
+
+# Integración con Git
+git
+
+# Integración con SonarQube (withSonarQubeEnv, waitForQualityGate)
+sonar
+
+# Soporte Docker dentro de pipelines (opcional pero útil)
+docker-workflow
+
+# Limpieza de workspace (cleanWs / ws-cleanup)
+ws-cleanup
+
+# Marcas de tiempo en consola (options { timestamps() })
+timestamper
+
+# Credenciales
+credentials
+credentials-binding

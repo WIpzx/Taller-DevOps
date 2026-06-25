@@ -1,0 +1,81 @@
+// ============================================================
+// Job:  taller_devops_frontend_dev   (DEV — ramas feature/**)
+// Pipeline: Checkout -> Sonar -> Quality Gate -> Build -> Deploy -> ps -> logs
+// Despliega el frontend en el entorno DEV (UI host:3000) con docker-compose.dev.yml
+// ============================================================
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+  }
+
+  environment {
+    APP_NAME          = 'taller_devops'
+    SONAR_PROJECT_KEY = 'taller_devops_frontend'
+    COMPOSE_FILE      = 'docker-compose.dev.yml'
+    ENV_FILE          = '.env.dev'
+  }
+
+  stages {
+    stage('Descargar codigo fuente') {
+      steps {
+        checkout scm
+        sh 'git log -1 --oneline || true'
+      }
+    }
+
+    stage('Analisis SonarQube') {
+      steps {
+        dir('bezkoder-ui') {
+          // Cobertura real con react-scripts (Node 16 incluido en la imagen de Jenkins)
+          sh 'npm install --no-audit --no-fund'
+          sh 'CI=true npm run test:coverage'
+          withSonarQubeEnv('SonarQube') {
+            sh 'sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY}'
+          }
+        }
+      }
+    }
+
+    stage('Validar Quality Gate') {
+      steps {
+        timeout(time: 10, unit: 'MINUTES') {
+          waitForQualityGate abortPipeline: true
+        }
+      }
+    }
+
+    stage('Compilar solucion') {
+      steps {
+        sh '[ -f ${ENV_FILE} ] || cp .env.dev.example ${ENV_FILE}'
+        sh 'docker compose --env-file ${ENV_FILE} -f ${COMPOSE_FILE} build ui_dev'
+      }
+    }
+
+    stage('Desplegar solucion') {
+      steps {
+        // Levanta toda la pila DEV (db + api + ui) para que el frontend tenga backend.
+        sh 'docker compose --env-file ${ENV_FILE} -f ${COMPOSE_FILE} up -d'
+      }
+    }
+
+    stage('Mostrar contenedores') {
+      steps {
+        sh 'docker ps --filter "name=taller_devops_" --format "table {{.Names}}\\t{{.Status}}\\t{{.Ports}}"'
+      }
+    }
+
+    stage('Mostrar logs') {
+      steps {
+        sh 'docker compose --env-file ${ENV_FILE} -f ${COMPOSE_FILE} logs --tail=60 ui_dev || true'
+      }
+    }
+  }
+
+  post {
+    success { echo "DEV Frontend desplegado. UI: http://localhost:3000" }
+    failure { echo 'Pipeline DEV Frontend FALLIDO (revisa Quality Gate, tests o build). No se desplegó.' }
+  }
+}

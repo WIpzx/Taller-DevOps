@@ -1,0 +1,76 @@
+# ============================================================
+# Entorno PROD — despliegue desde ramas release/**
+# Puertos host:  UI=4000  API=4001  (MySQL solo interno, no expuesto)
+# Contenedores/redes/volúmenes con sufijo _prod para coexistir con DEV.
+#
+# Levantar:  docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+# La credencial MYSQLDB_ROOT_PASSWORD se interpola desde .env.prod (--env-file).
+# ============================================================
+name: taller_devops_prod
+
+services:
+  mysqldb_prod:
+    image: mysql:5.7
+    container_name: taller_devops_mysql_prod
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQLDB_ROOT_PASSWORD:?Define MYSQLDB_ROOT_PASSWORD en .env.prod (usa --env-file .env.prod)}
+      - MYSQL_DATABASE=bezkoder_db
+    # MySQL NO se publica al host: solo accesible dentro de taller_prod_net.
+    expose:
+      - "3306"
+    volumes:
+      - db_prod:/var/lib/mysql
+    networks:
+      - taller_prod_net
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  api_prod:
+    depends_on:
+      mysqldb_prod:
+        condition: service_healthy
+    build: ./bezkoder-api
+    image: taller_devops_api_prod:latest
+    container_name: taller_devops_api_prod
+    restart: unless-stopped
+    ports:
+      - "4001:8080"
+    environment:
+      - DB_HOST=mysqldb_prod
+      - DB_USER=${MYSQLDB_USER:-root}
+      - DB_PASSWORD=${MYSQLDB_ROOT_PASSWORD:?Define MYSQLDB_ROOT_PASSWORD en .env.prod}
+      - DB_NAME=bezkoder_db
+      - DB_PORT=3306
+      - NODE_DOCKER_PORT=8080
+      - CLIENT_ORIGIN=http://localhost:4000
+    networks:
+      - taller_prod_net
+
+  ui_prod:
+    depends_on:
+      - api_prod
+    build:
+      context: ./bezkoder-ui
+      args:
+        # El navegador del usuario llama al API publicado en el host (4001).
+        - REACT_APP_API_BASE_URL=http://localhost:4001/api
+    image: taller_devops_ui_prod:latest
+    container_name: taller_devops_ui_prod
+    restart: unless-stopped
+    ports:
+      - "4000:80"
+    networks:
+      - taller_prod_net
+
+volumes:
+  db_prod:
+    name: taller_devops_db_prod
+
+networks:
+  taller_prod_net:
+    name: taller_prod_net

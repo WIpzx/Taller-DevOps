@@ -1,0 +1,99 @@
+// ============================================================
+// Job:  taller_devops_prod   (PROD — ramas release/**)
+// Pipeline: Checkout -> Sonar API -> QG -> Sonar Frontend -> QG -> Build -> Deploy -> ps -> logs
+// Despliega TODA la pila en PROD (UI host:4000, API host:4001) con docker-compose.prod.yml
+// PROD coexiste con DEV: contenedores/redes/volúmenes con sufijo _prod y puertos distintos.
+// ============================================================
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+  }
+
+  environment {
+    APP_NAME     = 'taller_devops'
+    COMPOSE_FILE = 'docker-compose.prod.yml'
+    ENV_FILE     = '.env.prod'
+  }
+
+  stages {
+    stage('Descargar codigo fuente') {
+      steps {
+        checkout scm
+        sh 'git log -1 --oneline || true'
+      }
+    }
+
+    stage('Analisis SonarQube - API') {
+      steps {
+        dir('bezkoder-api') {
+          sh 'npm install --no-audit --no-fund'
+          sh 'npm run test:ci'
+          withSonarQubeEnv('SonarQube') {
+            sh 'sonar-scanner -Dsonar.projectKey=taller_devops_api'
+          }
+        }
+      }
+    }
+
+    stage('Validar Quality Gate - API') {
+      steps {
+        timeout(time: 10, unit: 'MINUTES') {
+          waitForQualityGate abortPipeline: true
+        }
+      }
+    }
+
+    stage('Analisis SonarQube - Frontend') {
+      steps {
+        dir('bezkoder-ui') {
+          sh 'npm install --no-audit --no-fund'
+          sh 'CI=true npm run test:coverage'
+          withSonarQubeEnv('SonarQube') {
+            sh 'sonar-scanner -Dsonar.projectKey=taller_devops_frontend'
+          }
+        }
+      }
+    }
+
+    stage('Validar Quality Gate - Frontend') {
+      steps {
+        timeout(time: 10, unit: 'MINUTES') {
+          waitForQualityGate abortPipeline: true
+        }
+      }
+    }
+
+    stage('Compilar solucion') {
+      steps {
+        sh '[ -f ${ENV_FILE} ] || cp .env.prod.example ${ENV_FILE}'
+        sh 'docker compose --env-file ${ENV_FILE} -f ${COMPOSE_FILE} build'
+      }
+    }
+
+    stage('Desplegar solucion') {
+      steps {
+        sh 'docker compose --env-file ${ENV_FILE} -f ${COMPOSE_FILE} up -d'
+      }
+    }
+
+    stage('Mostrar contenedores') {
+      steps {
+        sh 'docker ps --filter "name=taller_devops_" --format "table {{.Names}}\\t{{.Status}}\\t{{.Ports}}"'
+      }
+    }
+
+    stage('Mostrar logs') {
+      steps {
+        sh 'docker compose --env-file ${ENV_FILE} -f ${COMPOSE_FILE} logs --tail=60 || true'
+      }
+    }
+  }
+
+  post {
+    success { echo "PROD desplegado. UI: http://localhost:4000  API: http://localhost:4001/api/tutorials" }
+    failure { echo 'Pipeline PROD FALLIDO (revisa Quality Gate, tests o build). No se desplegó.' }
+  }
+}

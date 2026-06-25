@@ -1,0 +1,43 @@
+# ===== Dependencias =====
+node_modules/
+**/node_modules/
+
+# ===== Builds / artefactos =====
+build/
+dist/
+**/build/
+**/dist/
+*.tgz
+
+# ===== Cobertura / reportes =====
+coverage/
+**/coverage/
+.nyc_output/
+.scannerwork/
+
+# ===== Entornos (SECRETOS: nunca versionar los reales) =====
+.env
+.env.dev
+.env.prod
+.env.local
+.env.*.local
+# Sí se versionan las plantillas:
+!.env.example
+!.env.dev.example
+!.env.prod.example
+
+# ===== Logs / temporales =====
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ===== Sistema / IDE =====
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.claude/
+
+# ===== PDF generado (se regenera con script) =====
+docs/*.pdf

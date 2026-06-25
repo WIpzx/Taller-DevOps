@@ -1,0 +1,76 @@
+# ============================================================
+# Entorno DEV — despliegue desde ramas feature/**
+# Puertos host:  UI=3000  API=3001  (MySQL solo interno, no expuesto)
+# Contenedores/redes/volúmenes con sufijo _dev para coexistir con PROD.
+#
+# Levantar:  docker compose --env-file .env.dev -f docker-compose.dev.yml up -d --build
+# La credencial MYSQLDB_ROOT_PASSWORD se interpola desde .env.dev (--env-file).
+# ============================================================
+name: taller_devops_dev
+
+services:
+  mysqldb_dev:
+    image: mysql:5.7
+    container_name: taller_devops_mysql_dev
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQLDB_ROOT_PASSWORD:?Define MYSQLDB_ROOT_PASSWORD en .env.dev (usa --env-file .env.dev)}
+      - MYSQL_DATABASE=bezkoder_db
+    # MySQL NO se publica al host: solo accesible dentro de taller_dev_net.
+    expose:
+      - "3306"
+    volumes:
+      - db_dev:/var/lib/mysql
+    networks:
+      - taller_dev_net
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  api_dev:
+    depends_on:
+      mysqldb_dev:
+        condition: service_healthy
+    build: ./bezkoder-api
+    image: taller_devops_api_dev:latest
+    container_name: taller_devops_api_dev
+    restart: unless-stopped
+    ports:
+      - "3001:8080"
+    environment:
+      - DB_HOST=mysqldb_dev
+      - DB_USER=${MYSQLDB_USER:-root}
+      - DB_PASSWORD=${MYSQLDB_ROOT_PASSWORD:?Define MYSQLDB_ROOT_PASSWORD en .env.dev}
+      - DB_NAME=bezkoder_db
+      - DB_PORT=3306
+      - NODE_DOCKER_PORT=8080
+      - CLIENT_ORIGIN=http://localhost:3000
+    networks:
+      - taller_dev_net
+
+  ui_dev:
+    depends_on:
+      - api_dev
+    build:
+      context: ./bezkoder-ui
+      args:
+        # El navegador del usuario llama al API publicado en el host (3001).
+        - REACT_APP_API_BASE_URL=http://localhost:3001/api
+    image: taller_devops_ui_dev:latest
+    container_name: taller_devops_ui_dev
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    networks:
+      - taller_dev_net
+
+volumes:
+  db_dev:
+    name: taller_devops_db_dev
+
+networks:
+  taller_dev_net:
+    name: taller_dev_net

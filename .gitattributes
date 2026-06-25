@@ -1,0 +1,12 @@
+# Normalización de fin de línea.
+# Forzar LF en archivos que se ejecutan/parsean en Linux (contenedores, CI).
+* text=auto
+
+*.sh            text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+Dockerfile      text eol=lf
+*.Dockerfile    text eol=lf
+Jenkinsfile*    text eol=lf
+sonar-project.properties text eol=lf
+.env*.example   text eol=lf

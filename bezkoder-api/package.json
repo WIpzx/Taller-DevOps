@@ -4,7 +4,9 @@
   "description": "Node.js Rest Apis with Express, Sequelize & MySQL",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "test": "jest --runInBand",
+    "test:ci": "jest --runInBand --ci"
   },
   "keywords": [
     "nodejs",
@@ -22,5 +24,24 @@
     "express": "^4.17.1",
     "mysql2": "^2.0.2",
     "sequelize": "^5.21.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "collectCoverage": true,
+    "collectCoverageFrom": [
+      "app/controllers/**/*.js",
+      "app/models/tutorial.model.js"
+    ],
+    "coverageReporters": [
+      "text",
+      "lcov"
+    ],
+    "coverageDirectory": "coverage",
+    "testPathIgnorePatterns": [
+      "/node_modules/"
+    ]
   }
 }

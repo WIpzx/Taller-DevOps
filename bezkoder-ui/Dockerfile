@@ -15,6 +15,7 @@ RUN npm run build
 FROM nginx:1.17.0-alpine
 
 COPY --from=build-stage /bezkoder-ui/build /usr/share/nginx/html
-EXPOSE $REACT_DOCKER_PORT
+# nginx sirve en el puerto 80 (antes era $REACT_DOCKER_PORT, sin ARG -> vacío en build).
+EXPOSE 80
 
 CMD nginx -g 'daemon off;'
