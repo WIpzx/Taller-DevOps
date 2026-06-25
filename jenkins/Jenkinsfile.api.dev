@@ -3,8 +3,8 @@
 // Pipeline: Checkout -> Sonar -> Quality Gate -> Build -> Deploy -> ps -> logs
 // Despliega el API en el entorno DEV (API host:3001) con docker-compose.dev.yml
 // Requiere en Jenkins:
-//   - Servidor SonarQube llamado 'SonarQube' (URL http://taller_sonarqube:9000)
-//   - Webhook en SonarQube -> http://taller_jenkins:8080/sonarqube-webhook/
+//   - Servidor SonarQube llamado 'SonarQube' (URL http://sonarqube:9000  <- nombre de servicio, sin '_')
+//   - Webhook en SonarQube -> http://jenkins:8080/sonarqube-webhook/
 //   - Herramienta 'sonar-scanner' en PATH (incluida en la imagen jenkins/Dockerfile)
 // ============================================================
 pipeline {

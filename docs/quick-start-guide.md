@@ -160,9 +160,9 @@ las 15 condiciones visibles.
 **Configuración** (detalle en `jenkins-config.md`):
 1. Credencial *Secret text* `sonar-token` con el token de SonarQube.
 2. *Manage Jenkins → System → SonarQube servers*: Name `SonarQube`,
-   URL `http://taller_sonarqube:9000`, token = credencial.
+   URL `http://sonarqube:9000` (nombre de servicio, sin guion bajo), token = credencial.
 3. *Sonar Scanner* ya viene en la imagen de Jenkins (PATH).
-4. Webhook en SonarQube → `http://taller_jenkins:8080/sonarqube-webhook/`.
+4. Webhook en SonarQube → `http://jenkins:8080/sonarqube-webhook/`.
 
 **Captura esperada:** `capturas/06_jenkins_sonarqube_config.png`
 **Resultado esperado:** Jenkins muestra el servidor `SonarQube` configurado; los pipelines

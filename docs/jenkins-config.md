@@ -91,7 +91,7 @@ El script crea `QualityTaller2`, le agrega las **15 condiciones** y lo deja como
 2. Marca *Enable injection of SonarQube server configuration*.
 3. Add SonarQube:
    - **Name:** `SonarQube`  ← debe coincidir con `withSonarQubeEnv('SonarQube')`
-   - **Server URL:** `http://taller_sonarqube:9000`  ← nombre de contenedor en la red `taller_cicd_net`
+   - **Server URL:** `http://sonarqube:9000`  ← usa el nombre de **servicio** de compose (sin guion bajo). El Tomcat de SonarQube rechaza con HTTP 400 los `Host` que contienen `_` (p. ej. `taller_sonarqube`).
    - **Server authentication token:** selecciona la credencial `sonar-token`
 4. Guarda.
 
@@ -118,7 +118,7 @@ Para que `waitForQualityGate` reciba el resultado del análisis:
 
 1. En SonarQube: **Administration → Configuration → Webhooks → Create**
    - Name: `Jenkins`
-   - URL: `http://taller_jenkins:8080/sonarqube-webhook/`  (¡con la barra final!)
+   - URL: `http://jenkins:8080/sonarqube-webhook/`  (¡con la barra final! Usa el nombre de servicio `jenkins`, sin guion bajo.)
 2. Guarda.
 
 ---
@@ -182,7 +182,11 @@ Si el taller exige **jobs libres** (Freestyle):
 
 | Desde | Hacia | URL |
 |-------|-------|-----|
-| Jenkins | SonarQube | `http://taller_sonarqube:9000` |
-| SonarQube (webhook) | Jenkins | `http://taller_jenkins:8080/sonarqube-webhook/` |
+| Jenkins | SonarQube | `http://sonarqube:9000` |
+| SonarQube (webhook) | Jenkins | `http://jenkins:8080/sonarqube-webhook/` |
+
+> ⚠️ Usa los **nombres de servicio** (`sonarqube`, `jenkins`), no los `container_name`
+> con guion bajo (`taller_sonarqube`, `taller_jenkins`): el Tomcat de SonarQube responde
+> HTTP 400 a peticiones cuyo `Host` contiene `_`.
 | Tu navegador | Jenkins | `http://localhost:8080` |
 | Tu navegador | SonarQube | `http://localhost:9000` |

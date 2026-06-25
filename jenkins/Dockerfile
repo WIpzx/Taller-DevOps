@@ -22,12 +22,13 @@ RUN apt-get update \
 # --- Node.js 16 (genera cobertura de API y UI dentro del workspace de Jenkins;
 #     evita el problema de bind-mounts al usar el socket del host) ---
 ARG NODE_VERSION=16.20.2
-RUN curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz -o /tmp/node.tar.xz \
-    && tar -xJf /tmp/node.tar.xz -C /opt \
+# Se usa el tarball .tar.gz (gzip) para no depender de xz, que no viene en la imagen base.
+RUN curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.gz -o /tmp/node.tar.gz \
+    && tar -xzf /tmp/node.tar.gz -C /opt \
     && ln -s /opt/node-v${NODE_VERSION}-linux-x64/bin/node /usr/local/bin/node \
     && ln -s /opt/node-v${NODE_VERSION}-linux-x64/bin/npm /usr/local/bin/npm \
     && ln -s /opt/node-v${NODE_VERSION}-linux-x64/bin/npx /usr/local/bin/npx \
-    && rm /tmp/node.tar.xz \
+    && rm /tmp/node.tar.gz \
     && node --version && npm --version
 
 # --- Sonar Scanner CLI (análisis de proyectos JS sin build de Maven/Gradle) ---
