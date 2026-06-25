@@ -21,7 +21,11 @@ pipeline {
   stages {
     stage('Descargar codigo fuente') {
       steps {
+        // Limpieza inicial para evitar workspace corrupto
+        deleteDir()
         checkout scm
+        sh 'git fetch --all --tags || true'
+        sh 'git checkout feature/taller2 || git checkout -B feature/taller2 origin/feature/taller2'
         sh 'git log -1 --oneline || true'
       }
     }
@@ -30,7 +34,7 @@ pipeline {
       steps {
         dir('bezkoder-ui') {
           // Cobertura real con react-scripts (Node 16 incluido en la imagen de Jenkins)
-          sh 'npm install --no-audit --no-fund'
+          sh 'if [ -f package-lock.json ]; then rm -rf node_modules && npm ci --no-audit --no-fund; else rm -rf node_modules && npm install --no-audit --no-fund --legacy-peer-deps --no-fund; fi'
           sh 'CI=true npm run test:coverage'
           withSonarQubeEnv('SonarQube') {
             sh 'sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY}'

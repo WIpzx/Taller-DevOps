@@ -21,7 +21,11 @@ pipeline {
   stages {
     stage('Descargar codigo fuente') {
       steps {
+        // Limpieza inicial del workspace para evitar reuse de node_modules corruptos
+        deleteDir()
         checkout scm
+        sh 'git fetch --all --tags || true'
+        sh 'git checkout release/taller2 || git checkout -B release/taller2 origin/release/taller2'
         sh 'git log -1 --oneline || true'
       }
     }
@@ -29,7 +33,8 @@ pipeline {
     stage('Analisis SonarQube - API') {
       steps {
         dir('bezkoder-api') {
-          sh 'npm install --no-audit --no-fund'
+          // Instalar de forma reproducible: preferir npm ci si existe package-lock.json
+          sh 'if [ -f package-lock.json ]; then rm -rf node_modules && npm ci --no-audit --no-fund; else rm -rf node_modules && npm install --no-audit --no-fund --legacy-peer-deps --no-fund; fi'
           sh 'npm run test:ci'
           withSonarQubeEnv('SonarQube') {
             sh 'sonar-scanner -Dsonar.projectKey=taller_devops_api'
@@ -49,7 +54,8 @@ pipeline {
     stage('Analisis SonarQube - Frontend') {
       steps {
         dir('bezkoder-ui') {
-          sh 'npm install --no-audit --no-fund'
+          // Instalación reproducible para evitar problemas de workspace/caché
+          sh 'if [ -f package-lock.json ]; then rm -rf node_modules && npm ci --no-audit --no-fund; else rm -rf node_modules && npm install --no-audit --no-fund --legacy-peer-deps --no-fund; fi'
           sh 'CI=true npm run test:coverage'
           withSonarQubeEnv('SonarQube') {
             sh 'sonar-scanner -Dsonar.projectKey=taller_devops_frontend'
